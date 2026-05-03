@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OmegaCalc Pro + Games</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --panel: #121212;
+            --green: #27d37e;
+            --red: #ff5e5e;
+            --gray: #888;
+            --text: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; overflow: hidden; user-select: none; }
+        body { background-color: #1a1a1a; display: flex; justify-content: center; height: 100vh; }
+
+        .app-container {
+            background-color: var(--bg);
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Nav Superior */
+        .top-nav {
+            display: flex;
+            justify-content: flex-end;
+            padding: 20px;
+            gap: 20px;
+            background: var(--bg);
+        }
+
+        .nav-icon { fill: var(--gray); width: 24px; cursor: pointer; transition: 0.3s; }
+        .nav-icon.active { fill: var(--green); transform: scale(1.1); }
+
+        /* Vistas */
+        .view { display: none; flex: 1; flex-direction: column; animation: fadeIn 0.3s; }
+        .view.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Calculadora */
+        .calc-screen { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; padding: 30px; }
+        #calc-history { color: var(--gray); font-size: 1.2rem; margin-bottom: 5px; min-height: 1.5rem; }
+        #calc-display { color: var(--text); font-size: 4rem; font-weight: 300; }
+
+        .keypad {
+            background-color: var(--panel);
+            padding: 20px 10px 30px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            border-radius: 30px 30px 0 0;
+        }
+
+        button {
+            border: none; background: none; color: var(--text);
+            font-size: 1.8rem; height: 70px; border-radius: 20px;
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+        }
+        button:active { background-color: #222; transform: scale(0.95); }
+        .btn-op { color: var(--green); }
+        .btn-equal { background-color: var(--green); border-radius: 30px; }
+
+        /* Conversor */
+        .conv-header { padding: 0 20px; display: flex; gap: 20px; margin-bottom: 10px; border-bottom: 1px solid #333; }
+        .conv-tab { color: var(--gray); padding-bottom: 10px; cursor: pointer; font-size: 1.1rem; }
+        .conv-tab.active { color: var(--green); border-bottom: 2px solid var(--green); }
+        
+        .conv-display { flex: 1; padding: 10px 20px; overflow-y: auto; }
+        .unit-box { margin-bottom: 15px; border-bottom: 1px solid #222; padding-bottom: 10px; }
+        .unit-label { color: var(--green); font-size: 0.8rem; text-transform: uppercase; }
+        .unit-val { font-size: 1.8rem; color: #fff; margin-top: 5px; }
+        .unit-val.active { color: var(--green); }
+
+        /* JUEGO DINO */
+        #v-game { background: #f7f7f7; color: #535353; }
+        #game-canvas { width: 100%; height: 250px; background: #fff; border-bottom: 2px solid #535353; display: block; }
+        .game-info { padding: 20px; text-align: center; font-weight: bold; font-size: 1.5rem; color: #000; }
+        .game-controls { padding: 10px; text-align: center; color: #888; font-size: 1rem; }
+        .btn-game { background: var(--green); color: black; margin: 20px; height: 60px; font-size: 1.2rem; border-radius: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="top-nav">
+        <!-- Icono Calc -->
+        <svg class="nav-icon active" id="i-calc" onclick="show('calc')" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2z"/></svg>
+        <!-- Icono Conv -->
+        <svg class="nav-icon" id="i-conv" onclick="show('conv')" viewBox="0 0 24 24"><path d="M12.89 3L14.85 4.96L11.11 8.7L12.88 10.47L16.62 6.73L18.58 8.69L20 7.27L14.31 1.58L12.89 3ZM6.73 16.62L4.96 18.58L7.27 20L12.96 14.31L11.54 12.89L9.58 14.85L5.84 11.11L4.07 12.88L7.81 16.62H6.73Z"/></svg>
+        <!-- Icono Juego -->
+        <svg class="nav-icon" id="i-game" onclick="show('game')" viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+    </div>
+
+    <!-- CALCULADORA -->
+    <div id="v-calc" class="view active">
+        <div class="calc-screen">
+            <div id="calc-history"></div>
+            <div id="calc-display">0</div>
+        </div>
+        <div class="keypad">
+            <button class="btn-op" onclick="cAll()" style="color:var(--red)">C</button>
+            <button class="btn-op" onclick="cIn('%')">%</button>
+            <button class="btn-op" onclick="cBack()">⌫</button>
+            <button class="btn-op" onclick="cIn('/')">&divide;</button>
+            <button onclick="cIn('7')">7</button><button onclick="cIn('8')">8</button><button onclick="cIn('9')">9</button>
+            <button class="btn-op" onclick="cIn('*')">&times;</button>
+            <button onclick="cIn('4')">4</button><button onclick="cIn('5')">5</button><button onclick="cIn('6')">6</button>
+            <button class="btn-op" onclick="cIn('-')">&minus;</button>
+            <button onclick="cIn('1')">1</button><button onclick="cIn('2')">2</button><button onclick="cIn('3')">3</button>
+            <button class="btn-op" onclick="cIn('+')">+</button>
+            <button onclick="cIn('00')">00</button><button onclick="cIn('0')">0</button><button onclick="cIn('.')">.</button>
+            <button class="btn-equal" onclick="cSolve()">=</button>
+        </div>
+    </div>
+
+    <!-- CONVERSOR RESTAURADO -->
+    <div id="v-conv" class="view">
+        <div class="conv-header">
+            <div class="conv-tab active" id="tab-len" onclick="setMode('len')">Longitud</div>
+            <div class="conv-tab" id="tab-mass" onclick="setMode('mass')">Masa</div>
+            <div class="conv-tab" id="tab-temp" onclick="setMode('temp')">Temperatura</div>
+        </div>
+        <div class="conv-display">
+            <div class="unit-box">
+                <span class="unit-label" id="u1-lab">Pie (ft)</span>
+                <div class="unit-val active" id="u1-val">1</div>
+            </div>
+            <div class="unit-box">
+                <span class="unit-label" id="u2-lab">Centímetro (cm)</span>
+                <div class="unit-val" id="u2-val">30.48</div>
+            </div>
+            <div class="unit-box">
+                <span class="unit-label" id="u3-lab">Pulgada (in)</span>
+                <div class="unit-val" id="u3-val">12</div>
+            </div>
+        </div>
+        <div class="keypad" style="background:transparent">
+            <button onclick="vIn('7')">7</button><button onclick="vIn('8')">8</button><button onclick="vIn('9')">9</button>
+            <button class="btn-op" onclick="vAC()" style="background:#222">AC</button>
+            <button onclick="vIn('4')">4</button><button onclick="vIn('5')">5</button><button onclick="vIn('6')">6</button>
+            <button onclick="vIn('1')">1</button><button onclick="vIn('2')">2</button><button onclick="vIn('3')">3</button>
+            <button class="btn-op" onclick="vDel()" style="background:#222">⌫</button>
+            <button onclick="vIn('0')">0</button><button onclick="vIn('.')">.</button>
+        </div>
+    </div>
+
+    <!-- JUEGO T-REX ARREGLADO -->
+    <div id="v-game" class="view">
+        <div class="game-info" id="score">SCORE: 0</div>
+        <!-- Se añadió tabindex para que detecte mejor los toques -->
+        <canvas id="game-canvas" tabindex="0"></canvas>
+        <div class="game-controls">Toca el recuadro blanco para saltar los cactus</div>
+        <button class="btn-game" onclick="initGame()">REINICIAR PARTIDA</button>
+    </div>
+</div>
+
+<script>
+    // --- NAVEGACIÓN ---
+    function show(v) {
+        document.querySelectorAll('.view, .nav-icon').forEach(e => e.classList.remove('active'));
+        document.getElementById('v-'+v).classList.add('active');
+        document.getElementById('i-'+v).classList.add('active');
+        
+        // Retraso para asegurar que el canvas tenga dimensiones antes de iniciar el juego
+        if(v === 'game') {
+            setTimeout(initGame, 100);
+        }
+    }
+
+    // --- LÓGICA CALCULADORA ---
+    let cExp = "";
+    function cIn(v) { cExp += v; renderC(); }
+    function renderC() { document.getElementById('calc-display').innerHTML = cExp.replace(/\*/g,'&times;').replace(/\//g,'&divide;') || "0"; }
+    function cAll() { cExp = ""; document.getElementById('calc-history').innerText = ""; renderC(); }
+    function cBack() { cExp = cExp.slice(0,-1); renderC(); }
+    function cSolve() { 
+        try { 
+            let res = eval(cExp);
+            document.getElementById('calc-history').innerHTML = cExp.replace(/\*/g,'&times;').replace(/\//g,'&divide;');
+            cExp = res.toString(); 
+            renderC(); 
+        } catch { cExp = ""; } 
+    }
+
+    // --- LÓGICA CONVERSOR RESTAURADA ---
+    let vCur = "1", vMode = "len";
+    Number.prototype.getClean = function() { return Math.round(this * 10000) / 10000; };
+
+    function setMode(m) {
+        vMode = m;
+        document.querySelectorAll('.conv-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-'+m).classList.add('active');
+        vCur = "1"; updateV();
+    }
+    
+    function vIn(v) { vCur = (vCur === "0") ? v : vCur + v; updateV(); }
+    function vAC() { vCur = "0"; updateV(); }
+    function vDel() { vCur = vCur.slice(0,-1) || "0"; updateV(); }
+
+    function updateV() {
+        let val = parseFloat(vCur) || 0;
+        document.getElementById('u1-val').innerText = vCur;
+        const u1 = document.getElementById('u1-lab'), u2 = document.getElementById('u2-lab'), u3 = document.getElementById('u3-lab');
+        const v2 = document.getElementById('u2-val'), v3 = document.getElementById('u3-val');
+
+        if(vMode === 'len') {
+            u1.innerText = "Pie (ft)"; u2.innerText = "Centímetro (cm)"; u3.innerText = "Pulgada (in)";
+            v2.innerText = (val * 30.48).getClean(); v3.innerText = (val * 12).getClean();
+        } else if(vMode === 'mass') {
+            u1.innerText = "Kilogramo (kg)"; u2.innerText = "Libra (lb)"; u3.innerText = "Gramo (g)";
+            v2.innerText = (val * 2.20462).getClean(); v3.innerText = (val * 1000).getClean();
+        } else {
+            u1.innerText = "Celsius (°C)"; u2.innerText = "Fahrenheit (°F)"; u3.innerText = "Kelvin (K)";
+            v2.innerText = ((val * 9/5) + 32).getClean(); v3.innerText = (val + 273.15).getClean();
+        }
+    }
+
+    // --- LÓGICA JUEGO T-REX MEJORADA ---
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let dino, obstacles, gameScore, gameSpeed, gameActive = false, animationId;
+    let frame = 0;
+
+    canvas.addEventListener('mousedown', dinoJump);
+    canvas.addEventListener('touchstart', function(e) { e.preventDefault(); dinoJump(); }, {passive: false});
+
+    function initGame() {
+        cancelAnimationFrame(animationId);
+
+        canvas.width = canvas.parentElement.clientWidth || window.innerWidth;
+        canvas.height = 250;
+
+        dino = { x: 50, y: 190, w: 40, h: 40, dy: 0, jump: -14, gravity: 0.9, grounded: true };
+        obstacles = [];
+        gameScore = 0;
+        gameSpeed = 6;
+        gameActive = true;
+        frame = 0;
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function dinoJump() {
+        if (dino && dino.grounded && gameActive) {
+            dino.dy = dino.jump;
+            dino.grounded = false;
+        }
+    }
+
+    function spawnObstacleAI() {
+        const last = obstacles.length ? obstacles[obstacles.length - 1] : null;
+        const minGap = 120 + gameSpeed * 12;
+        const canSpawn = !last || (canvas.width - last.x) > minGap;
+
+        if (!canSpawn) return;
+
+        const spawnChance = 0.018 + (gameSpeed * 0.0012);
+        if (Math.random() > spawnChance) return;
+
+        const patternRoll = Math.random();
+
+        if (patternRoll < 0.60) {
+            obstacles.push(makeCactus(canvas.width));
+        } else if (patternRoll < 0.88) {
+            obstacles.push(makeCactus(canvas.width));
+            obstacles.push(makeCactus(canvas.width + 38));
+        } else if (gameSpeed > 8.2) {
+            obstacles.push(makeCactus(canvas.width));
+            obstacles.push(makeCactus(canvas.width + 36));
+            obstacles.push(makeCactus(canvas.width + 72));
+        } else {
+            obstacles.push(makeCactus(canvas.width));
+        }
+    }
+
+    function makeCactus(x) {
+        return {
+            x: x,
+            y: 180,
+            w: 16 + Math.random() * 14,
+            h: 26 + Math.random() * 18
+        };
+    }
+
+    function gameLoop() {
+        if(!gameActive) return;
+
+        frame++;
+
+        // Fondo
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Actualizar Dino
+        dino.dy += dino.gravity;
+        dino.y += dino.dy;
+
+        if (dino.y > 210 - dino.h) {
+            dino.y = 210 - dino.h;
+            dino.dy = 0;
+            dino.grounded = true;
+        }
+
+        // Dibujar Dino
+        ctx.fillStyle = "#535353";
+        const leg = Math.sin(frame * 0.3) * 5;
+        ctx.fillRect(dino.x, dino.y, dino.w, dino.h - 10);
+        ctx.fillRect(dino.x + 5, dino.y + dino.h - 10, 10, 10 + leg);
+        ctx.fillRect(dino.x + 25, dino.y + dino.h - 10, 10, 10 - leg);
+
+        // Línea del suelo
+        ctx.beginPath();
+        ctx.strokeStyle = "#999";
+        ctx.lineWidth = 2;
+        ctx.moveTo(0, 210);
+        ctx.lineTo(canvas.width, 210);
+        ctx.stroke();
+
+        // Generar Obstáculos con IA
+        spawnObstacleAI();
+
+        // Dibujar y mover Obstáculos
+        for (let i = 0; i < obstacles.length; i++) {
+            let o = obstacles[i];
+            o.x -= gameSpeed;
+
+            ctx.fillStyle = "#27d37e";
+            ctx.fillRect(o.x, o.y, o.w, o.h);
+
+            // Colisión
+            if (
+                dino.x < o.x + o.w &&
+                dino.x + dino.w > o.x &&
+                dino.y < o.y + o.h &&
+                dino.y + dino.h > o.y
+            ) {
+                gameActive = false;
+                alert("¡FIN DEL JUEGO! Puntuación final: " + Math.floor(gameScore));
+                return;
+            }
+        }
+
+        // Limpiar obstáculos que ya pasaron
+        obstacles = obstacles.filter(o => o.x > -60);
+
+        // Puntaje y dificultad
+        gameScore += 0.1;
+        gameSpeed += 0.002;
+
+        document.getElementById('score').innerText = "SCORE: " + Math.floor(gameScore);
+
+        animationId = requestAnimationFrame(gameLoop);
+    }
+</script>
+</body>
+</html>
